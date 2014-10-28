@@ -47,7 +47,7 @@ func (ar *Arrangement) squash(t clock.Time) {
 			break
 		}
 		a.Animate.Animate(ar, 1)
-		fmt.Printf("squash arrangement:\n%+v\n", ar)
+		fmt.Printf("squash: %+v\n", ar)
 		remove++
 	}
 	ar.Animations = ar.Animations[remove:]

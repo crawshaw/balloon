@@ -114,7 +114,6 @@ func (s *scissorArm) expand(t0 clock.Time) {
 
 func appendAnimation(n *sprite.Node, t0 clock.Time, animate animation.Animater) {
 	ar := n.Arranger.(*animation.Arrangement)
-	fmt.Printf("appendAnimation: n=%p, ar=%p\n", n, ar)
 	ar.Animations = append(ar.Animations, animation.Animation{
 		T0:      t0,
 		T1:      t0 + 15,
