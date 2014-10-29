@@ -12,6 +12,7 @@ import (
 	"image/png"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -73,10 +74,10 @@ func fbinit() {
 	b.Arranger = a
 
 	scissor = newScissorArm(eng)
-	scissor.node.Arranger = &animation.Arrangement{
-		Offset: geom.Point{X: 24, Y: 24},
-	}
+	scissor.arrangement.Offset = geom.Point{X: 24, Y: 24}
 	scene.AppendChild(scissor.node)
+
+	Fprint(os.Stdout, scene, NotNilFilter)
 }
 
 func loadSheet() error {

@@ -19,9 +19,10 @@ const (
 )
 
 type scissorArm struct {
-	node     *sprite.Node
-	numFolds int
-	state    scissorState
+	arrangement animation.Arrangement
+	node        *sprite.Node
+	numFolds    int
+	state       scissorState
 }
 
 func newScissorArm(eng sprite.Engine) *scissorArm {
@@ -29,6 +30,7 @@ func newScissorArm(eng sprite.Engine) *scissorArm {
 		node:     new(sprite.Node),
 		numFolds: 3,
 	}
+	s.node.Arranger = s
 	eng.Register(s.node)
 
 	parent := s.node
@@ -78,7 +80,11 @@ func newScissorArm(eng sprite.Engine) *scissorArm {
 	return s
 }
 
-func (s *scissorArm) expand(t0 clock.Time) {
+func (s *scissorArm) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
+	s.arrangement.Arrange(e, n, t)
+}
+
+func (s *scissorArm) expand(t clock.Time) {
 	if s.state != scissorClosed {
 		return
 	}
@@ -86,38 +92,38 @@ func (s *scissorArm) expand(t0 clock.Time) {
 
 	top0, bottom0 := s.node.LastChild, s.node.FirstChild
 	fmt.Printf("top0: %+v\nbottom0: %+v\n", top0, bottom0)
-	appendAnimation(top0, t0, animation.Move{8, 0})
-	appendAnimation(bottom0, t0, animation.Move{8, 0})
+	appendTransform(top0, t, animation.Move{8, 0})
+	appendTransform(bottom0, t, animation.Move{8, 0})
 
 	n := top0.LastChild
 	for i := 0; i < s.numFolds-1; i++ {
-		appendAnimation(n, t0, animation.Move{16, 0})
+		appendTransform(n, t, animation.Move{16, 0})
 		n = n.LastChild
 	}
 	n = top0
 	for i := 0; i < s.numFolds; i++ {
-		appendAnimation(n.FirstChild, t0, animation.Rotate(0.7))
+		appendTransform(n.FirstChild, t, animation.Rotate(0.7))
 		n = n.LastChild
 	}
 
 	n = bottom0.LastChild
 	for i := 0; i < s.numFolds-1; i++ {
-		appendAnimation(n, t0, animation.Move{16, 0})
+		appendTransform(n, t, animation.Move{16, 0})
 		n = n.LastChild
 	}
 	n = bottom0
 	for i := 0; i < s.numFolds; i++ {
-		appendAnimation(n.FirstChild, t0, animation.Rotate(-0.7))
+		appendTransform(n.FirstChild, t, animation.Rotate(-0.7))
 		n = n.LastChild
 	}
 }
 
-func appendAnimation(n *sprite.Node, t0 clock.Time, animate animation.Animater) {
+func appendTransform(n *sprite.Node, t clock.Time, transformer animation.Transformer) {
 	ar := n.Arranger.(*animation.Arrangement)
-	ar.Animations = append(ar.Animations, animation.Animation{
-		T0:      t0,
-		T1:      t0 + 15,
-		Tween:   clock.Linear,
-		Animate: animate,
+	ar.Transforms = append(ar.Transforms, animation.Transform{
+		T0:          t,
+		T1:          t + 15,
+		Tween:       clock.Linear,
+		Transformer: transformer,
 	})
 }

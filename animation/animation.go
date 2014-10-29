@@ -10,47 +10,47 @@ import (
 )
 
 // Arrangement is a sprite Arranger that uses high-level concepts to
-// transform and animate a sprite Node.
+// transform a sprite Node.
 type Arrangement struct {
 	Offset     geom.Point     // distance between parent and pivot
 	Pivot      geom.Point     // point on sized, unrotated node
 	Size       *geom.Point    // optional bounding rectangle for scaling
 	Rotation   float32        // radians counter-clockwise
 	Texture    sprite.Texture // optional Node Texture
-	Animations []Animation    // active animations to apply on Arrange
+	Transforms []Transform    // active transformations to apply on Arrange
 
 	// TODO: Physics *physics.Physics
 }
 
 func (ar *Arrangement) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
 	ar2 := *ar
-	for _, a := range ar.Animations {
+	for _, a := range ar.Transforms {
 		tween := a.Tween(a.T0, a.T1, t)
-		a.Animate.Animate(&ar2, tween)
+		a.Transformer.Transform(&ar2, tween)
 	}
 	e.SetTexture(n, t, ar2.Texture)
 	e.SetTransform(n, t, ar2.Affine())
 
-	ar.squash(t)
+	//ar.squash(t)
 }
 
-// squash plays through animations and physics, updating the Arrangement
-// and removing any outdated animations.
+// Squash plays through transformas and physics, updating the Arrangement
+// and removing any outdated transforms.
 //
 // TODO: automatically do this? export? if automatic, merge into Arrange.
-func (ar *Arrangement) squash(t clock.Time) {
+func (ar *Arrangement) Squash(t clock.Time) {
 	remove := 0
-	for _, a := range ar.Animations {
+	for _, a := range ar.Transforms {
 		if t < a.T1 {
 			// stop squashing at the first animation that cannot be squashed.
 			// animations are not commutative.
 			break
 		}
-		a.Animate.Animate(ar, 1)
+		a.Transformer.Transform(ar, 1)
 		fmt.Printf("squash: %+v\n", ar)
 		remove++
 	}
-	ar.Animations = ar.Animations[remove:]
+	ar.Transforms = ar.Transforms[remove:]
 }
 
 func (ar *Arrangement) Affine() f32.Affine {
@@ -72,27 +72,27 @@ func (ar *Arrangement) Affine() f32.Affine {
 	return a
 }
 
-type Animation struct {
-	T0, T1  clock.Time
-	Tween   func(t0, t1, t clock.Time) float32
-	Animate Animater
+type Transform struct {
+	T0, T1      clock.Time
+	Tween       func(t0, t1, t clock.Time) float32
+	Transformer Transformer
 }
 
-type Animater interface {
-	Animate(ar *Arrangement, tween float32)
+type Transformer interface {
+	Transform(ar *Arrangement, tween float32)
 }
 
 // Rotate rotates counter-clockwise, measured in radians.
 type Rotate float32
 
-func (r Rotate) Animate(ar *Arrangement, tween float32) {
+func (r Rotate) Transform(ar *Arrangement, tween float32) {
 	ar.Rotation += tween * float32(r)
 }
 
 // Move moves the Arrangement offset.
 type Move geom.Point
 
-func (m Move) Animate(ar *Arrangement, tween float32) {
+func (m Move) Transform(ar *Arrangement, tween float32) {
 	ar.Offset.X += m.X * geom.Pt(tween)
 	ar.Offset.Y += m.Y * geom.Pt(tween)
 }
