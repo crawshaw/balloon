@@ -198,15 +198,19 @@ func (p *printer) print(x reflect.Value) {
 			if ar.Texture != 0 {
 				p.printf("Texture:    %d\n", ar.Texture)
 			}
-			if len(ar.Transforms) > 0 {
-				p.printf("Transforms: [\n", ar.Size)
-				p.indent++
-				for _, t := range ar.Transforms {
-					p.print(reflect.ValueOf(t))
-					p.printf("\n")
-				}
-				p.indent--
-				p.printf("]")
+			if ar.Transform.Transformer != nil {
+				p.printf("Transform:")
+				p.print(reflect.ValueOf(ar.Transform))
+				/*
+					[\n", ar.Size)
+					p.indent++
+					for _, t := range ar.Transforms {
+						p.print(reflect.ValueOf(t))
+						p.printf("\n")
+					}
+					p.indent--
+					p.printf("]")
+				*/
 			}
 
 			p.indent--

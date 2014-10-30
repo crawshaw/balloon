@@ -120,10 +120,10 @@ func (s *scissorArm) expand(t clock.Time) {
 
 func appendTransform(n *sprite.Node, t clock.Time, transformer animation.Transformer) {
 	ar := n.Arranger.(*animation.Arrangement)
-	ar.Transforms = append(ar.Transforms, animation.Transform{
-		T0:          t,
-		T1:          t + 15,
+	ar.Transform.T0 = t
+	ar.Transform.T1 = t + 15
+	ar.Transform.Transform = animation.Transform{
 		Tween:       clock.Linear,
 		Transformer: transformer,
-	})
+	}
 }

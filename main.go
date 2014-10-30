@@ -12,6 +12,7 @@ import (
 	"image/png"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"path/filepath"
 	"sync"
@@ -46,6 +47,7 @@ var (
 	scene *sprite.Node
 
 	scissor *scissorArm
+	//scissor *scissorArm2
 )
 
 var size geom.Point
@@ -53,7 +55,8 @@ var size geom.Point
 func fbinit() {
 	size = geom.Point{geom.Width, geom.Height}
 	start = time.Now()
-	fb.Image = glutil.NewImage(size)
+	toPx := func(x geom.Pt) int { return int(math.Ceil(float64(geom.Pt(x).Px()))) }
+	fb.Image = glutil.NewImage(toPx(geom.Width), toPx(geom.Height))
 	eng = portable.Engine(fb.Image.RGBA)
 	if err := loadSheet(); err != nil {
 		log.Fatal(err)
@@ -74,8 +77,13 @@ func fbinit() {
 	b.Arranger = a
 
 	scissor = newScissorArm(eng)
-	scissor.arrangement.Offset = geom.Point{X: 24, Y: 24}
-	scene.AppendChild(scissor.node)
+
+	n := &sprite.Node{
+		Arranger: &animation.Arrangement{Offset: geom.Point{X: 24, Y: 24}},
+	}
+	eng.Register(n)
+	n.AppendChild(scissor.node)
+	scene.AppendChild(n)
 
 	Fprint(os.Stdout, scene, NotNilFilter)
 }
