@@ -10,9 +10,6 @@ import (
 	"code.google.com/p/go.mobile/sprite/clock"
 )
 
-//type NodeName string
-//type Path []int
-
 type State struct {
 	Duration   int
 	Next       string
@@ -33,9 +30,6 @@ type Animation struct {
 
 	root           *sprite.Node
 	lastTransition clock.Time
-
-	//TODO maybe, data structure-esque: Paths  map[NodeName]Path
-	//nodes          map[NodeName]*sprite.Node
 }
 
 func (a *Animation) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
@@ -47,34 +41,33 @@ func (a *Animation) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
 		log.Printf("animation.Animation: root node changed (%p, %p)", a.root, n)
 		return
 	}
+	s := a.States[a.Current]
+	if s.Next != "" && clock.Time(s.Duration) < t-a.lastTransition {
+		a.Transition(t, s.Next)
+	}
 }
 
 func (a *Animation) Transition(t clock.Time, name string) {
+	log.Printf("animation: Transition from %q to %q", a.Current, name)
 	for n := range a.States[a.Current].Transforms {
+		// Squash the final animation state down onto the node.
+		ar := n.Arranger.(*Arrangement)
+		ar.Transform.Transformer.Transform(ar, 1)
 		n.Arranger.(*Arrangement).Transform.Transformer = nil
 	}
 	s := a.States[name]
 	for n, transform := range s.Transforms {
 		ar := n.Arranger.(*Arrangement)
-		ar.Transform.T0 = t
-		ar.Transform.T1 = t + clock.Time(s.Duration)
-		ar.Transform.Transform = transform
+		ar.T0 = t
+		ar.T1 = t + clock.Time(s.Duration)
+		ar.Transform = transform
 	}
 	a.Current = name
+	a.lastTransition = t
 }
 
 func (a *Animation) init(root *sprite.Node) error {
 	a.root = root
-	/*
-		a.nodes = make(map[NodeName]*sprite.Node)
-		for nodeName, path := range a.Nodes {
-			n, err := resolve(a.root, path)
-			if err != nil {
-				return fmt.Errorf("animation.Animation: node %q has invalid path %v, search stopped at %v", nodeName, path, err)
-			}
-			a.nodes[nodeName] = n
-		}
-	*/
 	for stateName, s := range a.States {
 		if s.Next != "" {
 			if _, exists := a.States[s.Next]; !exists {
@@ -85,29 +78,6 @@ func (a *Animation) init(root *sprite.Node) error {
 	return nil
 }
 
-/*
-func resolve(n *sprite.Node, path Path) (*sprite.Node, error) {
-	if len(path) == 0 {
-		return n, nil
-	}
-	c := n.FirstChild
-	rem := path[0]
-	for rem > 0 && c != nil {
-		c = c.NextSibling
-		rem--
-	}
-	if c == nil {
-		return nil, fmt.Errorf("[%d]", rem)
-	}
-
-	c, err := resolve(c, path[1:])
-	if err != nil {
-		return nil, fmt.Errorf("[%d]%s", path[0], err)
-	}
-	return c, nil
-}
-*/
-
 // Arrangement is a sprite Arranger that uses high-level concepts to
 // transform a sprite Node.
 type Arrangement struct {
@@ -117,12 +87,8 @@ type Arrangement struct {
 	Rotation float32        // radians counter-clockwise
 	Texture  sprite.Texture // optional Node Texture
 
-	Transform struct {
-		Transform
-		T0, T1 clock.Time
-	}
-
-	//Transforms []Transform    // active transformations to apply on Arrange
+	T0, T1    clock.Time
+	Transform Transform
 
 	// TODO: Physics *physics.Physics
 }
@@ -135,41 +101,12 @@ func (ar *Arrangement) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
 		if fn == nil {
 			fn = clock.Linear
 		}
-		tween := fn(ar.Transform.T0, ar.Transform.T1, t)
+		tween := fn(ar.T0, ar.T1, t)
 		ar.Transform.Transformer.Transform(&ar2, tween)
 	}
-	/*
-		for _, a := range ar.Transforms {
-			tween := a.Tween(a.T0, a.T1, t)
-			a.Transformer.Transform(&ar2, tween)
-		}
-	*/
 	e.SetTexture(n, t, ar2.Texture)
 	e.SetTransform(n, t, ar2.Affine())
-
-	//ar.squash(t)
 }
-
-// Squash plays through transformas and physics, updating the Arrangement
-// and removing any outdated transforms.
-//
-// TODO: automatically do this? export? if automatic, merge into Arrange.
-/*
-func (ar *Arrangement) Squash(t clock.Time) {
-	remove := 0
-	for _, a := range ar.Transforms {
-		if t < a.T1 {
-			// stop squashing at the first animation that cannot be squashed.
-			// animations are not commutative.
-			break
-		}
-		a.Transformer.Transform(ar, 1)
-		fmt.Printf("squash: %+v\n", ar)
-		remove++
-	}
-	ar.Transforms = ar.Transforms[remove:]
-}
-*/
 
 func (ar *Arrangement) Affine() f32.Affine {
 	var a f32.Affine
@@ -191,7 +128,6 @@ func (ar *Arrangement) Affine() f32.Affine {
 }
 
 type Transform struct {
-	//T0, T1      clock.Time
 	Tween       func(t0, t1, t clock.Time) float32
 	Transformer Transformer
 }
@@ -213,6 +149,8 @@ func (r Rotate) Transform(ar *Arrangement, tween float32) {
 	ar.Rotation += tween * float32(r)
 }
 
+func (r Rotate) String() string { return fmt.Sprintf("Rotate(%d)", r) }
+
 // Move moves the Arrangement offset.
 type Move geom.Point
 
@@ -221,6 +159,4 @@ func (m Move) Transform(ar *Arrangement, tween float32) {
 	ar.Offset.Y += m.Y * geom.Pt(tween)
 }
 
-func (m Move) String() string {
-	return fmt.Sprintf("Move(%s,%s)", m.X, m.Y)
-}
+func (m Move) String() string { return fmt.Sprintf("Move(%s,%s)", m.X, m.Y) }

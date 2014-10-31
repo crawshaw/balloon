@@ -23,22 +23,23 @@ type scissorArm2 struct {
 }
 
 func (s *scissorArm2) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
+	s.a.Arrange(e, n, t)
 	s.arrangement.Arrange(e, n, t)
 }
 
-func (s *scissorArm2) moveTop(ar *animation.Arrangement, tween float32) {
-	ar.Offset.X += 16 * geom.Pt(tween) // TODO extend ratio
+func (s *scissorArm2) moveArm(ar *animation.Arrangement, tween float32) {
+	ar.Offset.X += 16 * geom.Pt(tween) * (s.extend / maxExtend)
 }
 
-func (s *scissorArm2) moveBottom(ar *animation.Arrangement, tween float32) {
-	s.moveTop(ar, tween)
+func (s *scissorArm2) moveArmBack(ar *animation.Arrangement, tween float32) {
+	ar.Offset.X -= 16 * geom.Pt(tween) * (s.extend / maxExtend)
 }
 
-func (s *scissorArm2) rotateTop(ar *animation.Arrangement, tween float32) {
+func (s *scissorArm2) rotateArm(ar *animation.Arrangement, tween float32) {
 	ar.Rotation += tween * 0.7 * float32(s.extend/maxExtend)
 }
 
-func (s *scissorArm2) rotateBottom(ar *animation.Arrangement, tween float32) {
+func (s *scissorArm2) rotateArmBack(ar *animation.Arrangement, tween float32) {
 	ar.Rotation -= tween * 0.7 * float32(s.extend/maxExtend)
 }
 
@@ -51,37 +52,13 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 	s.node.Arranger = s
 	eng.Register(s.node)
 
-	moveTop := animation.TransformerFunc(s.moveTop)
-	rotateTop := animation.TransformerFunc(s.rotateTop)
-	/*
-		moveBottom := animation.TransformerFunc(s.moveBottom)
-		rotateBottom := animation.TransformerFunc(s.rotateBottom)
-	*/
+	moveArm := animation.TransformerFunc(s.moveArm)
+	moveArmBack := animation.TransformerFunc(s.moveArmBack)
+	rotateArm := animation.TransformerFunc(s.rotateArm)
+	rotateArmBack := animation.TransformerFunc(s.rotateArmBack)
 
-	expanding := animation.State{
-		Duration:   15,
-		Next:       "open",
-		Transforms: make(map[*sprite.Node]animation.Transform),
-		/*
-				top[0]: animation.Transform{
-					Tween:       clock.EaseIn,
-					Transformer: moveTop,
-				},
-				top[1]: animation.Transform{
-					Tween:       clock.EaseIn,
-					Transformer: moveTop,
-				},
-				top[2]: animation.Transform{
-					Tween:       clock.EaseIn,
-					Transformer: moveTop,
-				},
-				topArm[0]: animation.Transform{
-					Tween:       clock.EaseIn,
-					Transformer: rotateTop,
-				},
-			},
-		*/
-	}
+	expanding := make(map[*sprite.Node]animation.Transform)
+	contracting := make(map[*sprite.Node]animation.Transform)
 
 	// TODO: have i inverted top and bottom naming here?
 
@@ -95,9 +72,13 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 		parent.AppendChild(b)
 		parent = b
 
-		expanding.Transforms[b] = animation.Transform{
+		expanding[b] = animation.Transform{
 			Tween:       clock.EaseIn,
-			Transformer: moveTop, // TODO: i == 0 moveFirstTop
+			Transformer: moveArm,
+		}
+		contracting[b] = animation.Transform{
+			Tween:       clock.EaseIn,
+			Transformer: moveArmBack,
 		}
 
 		arm := new(sprite.Node)
@@ -111,9 +92,13 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 		arm.Arranger = a
 		b.AppendChild(arm)
 
-		expanding.Transforms[arm] = animation.Transform{
+		expanding[arm] = animation.Transform{
 			Tween:       clock.EaseIn,
-			Transformer: rotateTop,
+			Transformer: rotateArmBack,
+		}
+		contracting[arm] = animation.Transform{
+			Tween:       clock.EaseIn,
+			Transformer: rotateArm,
 		}
 	}
 
@@ -127,6 +112,15 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 		parent.AppendChild(t)
 		parent = t
 
+		expanding[t] = animation.Transform{
+			Tween:       clock.EaseIn,
+			Transformer: moveArm,
+		}
+		contracting[t] = animation.Transform{
+			Tween:       clock.EaseIn,
+			Transformer: moveArmBack,
+		}
+
 		arm := new(sprite.Node)
 		eng.Register(arm)
 		a := &animation.Arrangement{
@@ -137,23 +131,34 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 		}
 		arm.Arranger = a
 		t.AppendChild(arm)
+
+		expanding[arm] = animation.Transform{
+			Tween:       clock.EaseIn,
+			Transformer: rotateArm,
+		}
+		contracting[arm] = animation.Transform{
+			Tween:       clock.EaseIn,
+			Transformer: rotateArmBack,
+		}
 	}
 
 	s.a = &animation.Animation{
 		Current: "closed",
 		States: map[string]animation.State{
-			"closed":    animation.State{},
-			"expanding": expanding,
-			"open":      animation.State{
-			/*
-				Transforms: map[*sprite.Node]animation.Transform{
-					top[0]: animation.Transform{},
-				},
-			*/
+			"closed": animation.State{},
+			"expanding": animation.State{
+				Duration:   10,
+				Next:       "open",
+				Transforms: expanding,
+			},
+			"open": animation.State{
+				Duration: 5,
+				Next:     "contracting",
 			},
 			"contracting": animation.State{
-				Duration: 15,
-				Next:     "closed",
+				Duration:   5,
+				Next:       "closed",
+				Transforms: contracting,
 			},
 		},
 	}
