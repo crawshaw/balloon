@@ -10,14 +10,13 @@ import (
 	"code.google.com/p/go.mobile/sprite/clock"
 )
 
-type NodeName string
-
-type Path []int
+//type NodeName string
+//type Path []int
 
 type State struct {
 	Duration   int
 	Next       string
-	Transforms map[NodeName]Transform
+	Transforms map[*sprite.Node]Transform
 }
 
 // Animation is a state machine for a node tree.
@@ -29,13 +28,14 @@ type State struct {
 // States can transition automatically after some predefined duration, or
 // by calling the Transition method.
 type Animation struct {
-	State  string
-	States map[string]State
-	Nodes  map[NodeName]Path
+	Current string
+	States  map[string]State
 
 	root           *sprite.Node
-	nodes          map[NodeName]*sprite.Node
 	lastTransition clock.Time
+
+	//TODO maybe, data structure-esque: Paths  map[NodeName]Path
+	//nodes          map[NodeName]*sprite.Node
 }
 
 func (a *Animation) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
@@ -49,20 +49,32 @@ func (a *Animation) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
 	}
 }
 
-func (a *Animation) Transition(state string) {
-	log.Printf("TODO Transition")
+func (a *Animation) Transition(t clock.Time, name string) {
+	for n := range a.States[a.Current].Transforms {
+		n.Arranger.(*Arrangement).Transform.Transformer = nil
+	}
+	s := a.States[name]
+	for n, transform := range s.Transforms {
+		ar := n.Arranger.(*Arrangement)
+		ar.Transform.T0 = t
+		ar.Transform.T1 = t + clock.Time(s.Duration)
+		ar.Transform.Transform = transform
+	}
+	a.Current = name
 }
 
 func (a *Animation) init(root *sprite.Node) error {
 	a.root = root
-	a.nodes = make(map[NodeName]*sprite.Node)
-	for nodeName, path := range a.Nodes {
-		n, err := resolve(a.root, path)
-		if err != nil {
-			return fmt.Errorf("animation.Animation: node %q has invalid path %v, search stopped at %v", nodeName, path, err)
+	/*
+		a.nodes = make(map[NodeName]*sprite.Node)
+		for nodeName, path := range a.Nodes {
+			n, err := resolve(a.root, path)
+			if err != nil {
+				return fmt.Errorf("animation.Animation: node %q has invalid path %v, search stopped at %v", nodeName, path, err)
+			}
+			a.nodes[nodeName] = n
 		}
-		a.nodes[nodeName] = n
-	}
+	*/
 	for stateName, s := range a.States {
 		if s.Next != "" {
 			if _, exists := a.States[s.Next]; !exists {
@@ -73,6 +85,7 @@ func (a *Animation) init(root *sprite.Node) error {
 	return nil
 }
 
+/*
 func resolve(n *sprite.Node, path Path) (*sprite.Node, error) {
 	if len(path) == 0 {
 		return n, nil
@@ -93,6 +106,7 @@ func resolve(n *sprite.Node, path Path) (*sprite.Node, error) {
 	}
 	return c, nil
 }
+*/
 
 // Arrangement is a sprite Arranger that uses high-level concepts to
 // transform a sprite Node.
@@ -117,7 +131,11 @@ func (ar *Arrangement) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
 	ar2 := *ar
 
 	if ar.Transform.Transformer != nil {
-		tween := ar.Transform.Tween(ar.Transform.T0, ar.Transform.T1, t)
+		fn := ar.Transform.Tween
+		if fn == nil {
+			fn = clock.Linear
+		}
+		tween := fn(ar.Transform.T0, ar.Transform.T1, t)
 		ar.Transform.Transformer.Transform(&ar2, tween)
 	}
 	/*

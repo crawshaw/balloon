@@ -46,14 +46,11 @@ var (
 	eng   sprite.Engine
 	scene *sprite.Node
 
-	scissor *scissorArm
-	//scissor *scissorArm2
+	//scissor *scissorArm
+	scissor *scissorArm2
 )
 
-var size geom.Point
-
 func fbinit() {
-	size = geom.Point{geom.Width, geom.Height}
 	start = time.Now()
 	toPx := func(x geom.Pt) int { return int(math.Ceil(float64(geom.Pt(x).Px()))) }
 	fb.Image = glutil.NewImage(toPx(geom.Width), toPx(geom.Height))
@@ -76,7 +73,7 @@ func fbinit() {
 	}
 	b.Arranger = a
 
-	scissor = newScissorArm(eng)
+	scissor = newScissorArm2(eng)
 
 	n := &sprite.Node{
 		Arranger: &animation.Arrangement{Offset: geom.Point{X: 24, Y: 24}},
@@ -138,14 +135,20 @@ func drawWindow() {
 	t := now()
 	eng.Render(scene, t)
 	fb.Upload()
-	fb.Draw(geom.Rectangle{geom.Point{}, size}, fb.Bounds())
+	fb.Draw(
+		geom.Point{},
+		geom.Point{geom.Width, 0},
+		geom.Point{0, geom.Height},
+		fb.Bounds(),
+	)
 	debug.DrawFPS()
 }
 
-func touch(t event.Touch) {
-	fmt.Printf("touch: %+v\n", t)
-	if t.Type == event.TouchStart {
-		scissor.expand(now())
+func touch(e event.Touch) {
+	fmt.Printf("touch: %+v\n", e)
+	if e.Type == event.TouchStart {
+		//scissor.expand(now())
+		scissor.touch(now(), e)
 		return
 	}
 }
