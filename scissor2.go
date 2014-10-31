@@ -46,7 +46,7 @@ func (s *scissorArm2) rotateArmBack(ar *animation.Arrangement, tween float32) {
 func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 	s := &scissorArm2{
 		extend:   maxExtend,
-		numFolds: 3,
+		numFolds: 4,
 		node:     new(sprite.Node),
 	}
 	s.node.Arranger = s
@@ -142,6 +142,15 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 		}
 	}
 
+	base := new(sprite.Node)
+	eng.Register(base)
+	base.Arranger = &animation.Arrangement{
+		Size:    &geom.Point{X: 12, Y: 36},
+		Texture: sheet.pad,
+	}
+
+	s.node.AppendChild(base)
+
 	s.a = &animation.Animation{
 		Current: "closed",
 		States: map[string]animation.State{
@@ -168,6 +177,7 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 
 func (s *scissorArm2) touch(t clock.Time, e event.Touch) {
 	if s.a.Current == "closed" {
+		s.arrangement.Offset.Y = e.Loc.Y
 		s.a.Transition(t, "expanding")
 	}
 }

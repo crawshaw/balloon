@@ -39,6 +39,7 @@ var sheet struct {
 	sheet   sprite.Sheet
 	balloon sprite.Texture
 	arm     sprite.Texture
+	pad     sprite.Texture
 }
 
 var (
@@ -46,7 +47,6 @@ var (
 	eng   sprite.Engine
 	scene *sprite.Node
 
-	//scissor *scissorArm
 	scissor *scissorArm2
 )
 
@@ -73,14 +73,19 @@ func fbinit() {
 	}
 	b.Arranger = a
 
-	scissor = newScissorArm2(eng)
+	b = new(sprite.Node)
+	eng.Register(b)
+	scene.AppendChild(b)
 
-	n := &sprite.Node{
-		Arranger: &animation.Arrangement{Offset: geom.Point{X: 24, Y: 24}},
+	b.Arranger = &animation.Arrangement{
+		Offset:  geom.Point{X: 136, Y: 36},
+		Size:    &geom.Point{X: 12, Y: 36},
+		Texture: sheet.pad,
 	}
-	eng.Register(n)
-	n.AppendChild(scissor.node)
-	scene.AppendChild(n)
+
+	scissor = newScissorArm2(eng)
+	scissor.arrangement.Offset.Y = 24
+	scene.AppendChild(scissor.node)
 
 	Fprint(os.Stdout, scene, NotNilFilter)
 }
@@ -107,6 +112,10 @@ func loadSheet() error {
 	sheet.balloon, err = eng.LoadTexture(s, image.Rect(0, 42, 148, 634))
 	if err != nil {
 		return fmt.Errorf("ballon: %v", err)
+	}
+	sheet.pad, err = eng.LoadTexture(s, image.Rect(194, 0, 294, 286))
+	if err != nil {
+		return fmt.Errorf("pad: %v", err)
 	}
 
 	return nil
@@ -147,7 +156,6 @@ func drawWindow() {
 func touch(e event.Touch) {
 	fmt.Printf("touch: %+v\n", e)
 	if e.Type == event.TouchStart {
-		//scissor.expand(now())
 		scissor.touch(now(), e)
 		return
 	}
