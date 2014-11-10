@@ -1,10 +1,12 @@
 package main
 
 import (
-	"code.google.com/p/go.mobile/event"
-	"code.google.com/p/go.mobile/geom"
-	"code.google.com/p/go.mobile/sprite"
-	"code.google.com/p/go.mobile/sprite/clock"
+	"math"
+
+	"golang.org/x/mobile/event"
+	"golang.org/x/mobile/geom"
+	"golang.org/x/mobile/sprite"
+	"golang.org/x/mobile/sprite/clock"
 
 	"github.com/crawshaw/balloon/animation"
 )
@@ -46,11 +48,21 @@ func (s *scissorArm2) rotateArmBack(ar *animation.Arrangement, tween float32) {
 func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 	s := &scissorArm2{
 		extend:   maxExtend,
-		numFolds: 4,
+		numFolds: 3,
 		node:     new(sprite.Node),
 	}
 	s.node.Arranger = s
 	eng.Register(s.node)
+
+	base := new(sprite.Node)
+	eng.Register(base)
+	base.Arranger = &animation.Arrangement{
+		Pivot:    geom.Point{X: 6, Y: 18},
+		Size:     &geom.Point{X: 12, Y: 36},
+		Rotation: math.Pi,
+		SubTex:   sheet.pad, // TODO: get a better texture
+	}
+	s.node.AppendChild(base)
 
 	moveArm := animation.TransformerFunc(s.moveArm)
 	moveArmBack := animation.TransformerFunc(s.moveArmBack)
@@ -64,10 +76,12 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 
 	parent := s.node
 	for i := 0; i < s.numFolds; i++ {
-		b := new(sprite.Node)
-		b.Arranger = &animation.Arrangement{
-			Offset: geom.Point{X: 10},
+		offX := geom.Pt(10)
+		if i == 0 {
+			offX = 5
 		}
+		b := new(sprite.Node)
+		b.Arranger = &animation.Arrangement{Offset: geom.Point{X: offX}}
 		eng.Register(b)
 		parent.AppendChild(b)
 		parent = b
@@ -87,7 +101,7 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 			Pivot:    geom.Point{X: 18, Y: 4},
 			Size:     &geom.Point{X: 36, Y: 9},
 			Rotation: 1.2,
-			Texture:  sheet.arm,
+			SubTex:   sheet.arm,
 		}
 		arm.Arranger = a
 		b.AppendChild(arm)
@@ -104,10 +118,12 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 
 	parent = s.node
 	for i := 0; i < s.numFolds; i++ {
-		t := new(sprite.Node)
-		t.Arranger = &animation.Arrangement{
-			Offset: geom.Point{X: 10},
+		offX := geom.Pt(10)
+		if i == 0 {
+			offX = 5
 		}
+		t := new(sprite.Node)
+		t.Arranger = &animation.Arrangement{Offset: geom.Point{X: offX}}
 		eng.Register(t)
 		parent.AppendChild(t)
 		parent = t
@@ -127,7 +143,7 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 			Pivot:    geom.Point{X: 18, Y: 4},
 			Size:     &geom.Point{X: 36, Y: 9},
 			Rotation: -1.2,
-			Texture:  sheet.arm,
+			SubTex:   sheet.arm,
 		}
 		arm.Arranger = a
 		t.AppendChild(arm)
@@ -142,19 +158,70 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 		}
 	}
 
-	base := new(sprite.Node)
-	eng.Register(base)
-	base.Arranger = &animation.Arrangement{
-		Size:    &geom.Point{X: 12, Y: 36},
-		Texture: sheet.pad,
+	// Pad.
+	p := new(sprite.Node)
+	eng.Register(p)
+	p.Arranger = &animation.Arrangement{
+		Offset:   geom.Point{X: 12},
+		Pivot:    geom.Point{X: 6, Y: 18},
+		Size:     &geom.Point{X: 12, Y: 36},
+		Rotation: math.Pi,
+		SubTex:   sheet.pad,
 	}
+	parent.AppendChild(p)
 
-	s.node.AppendChild(base)
+	// Balloon.
+	p = new(sprite.Node)
+	eng.Register(p)
+	p.Arranger = &animation.Arrangement{
+		Offset: geom.Point{X: 14, Y: -72 + 36/2},
+		Pivot:  geom.Point{X: 6, Y: 18},
+		Size:   &geom.Point{X: 24, Y: 72},
+		SubTex: sheet.balloon,
+	}
+	parent.AppendChild(p)
+
+	// New top-level node for moving around entire assembly.
+	p = &sprite.Node{
+		Arranger: &animation.Arrangement{},
+	}
+	eng.Register(p)
+	p.AppendChild(s.node)
+	s.node = p
+
+	size := geom.Pt(s.numFolds*10 + 12)
 
 	s.a = &animation.Animation{
-		Current: "closed",
+		Current: "init",
 		States: map[string]animation.State{
-			"closed": animation.State{},
+			"init": animation.State{},
+			"offscreen": animation.State{
+				Next: "onscreen",
+				Transforms: map[*sprite.Node]animation.Transform{
+					s.node: animation.Transform{
+						Tween:       clock.EaseInOut,
+						Transformer: animation.Move{X: -size},
+					},
+				},
+			},
+			"onscreen": animation.State{
+				Duration: 60,
+				Next:     "closed",
+				Transforms: map[*sprite.Node]animation.Transform{
+					s.node: animation.Transform{
+						Tween:       clock.EaseInOut,
+						Transformer: animation.Move{X: size},
+					},
+				},
+			},
+			"closed": animation.State{
+				Duration: 5,
+				Next:     "loading_balloon",
+			},
+			"loading_balloon": animation.State{
+				Next: "ready",
+			},
+			"ready": animation.State{},
 			"expanding": animation.State{
 				Duration:   10,
 				Next:       "open",
@@ -171,12 +238,16 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 			},
 		},
 	}
+	s.a.Transition(0, "offscreen")
 
 	return s
 }
 
 func (s *scissorArm2) touch(t clock.Time, e event.Touch) {
-	if s.a.Current == "closed" {
+	if scene == menuScene {
+		scene = gameScene
+	}
+	if s.a.Current == "ready" {
 		s.arrangement.Offset.Y = e.Loc.Y
 		s.a.Transition(t, "expanding")
 	}

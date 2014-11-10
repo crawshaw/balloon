@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"log"
 
-	"code.google.com/p/go.mobile/f32"
-	"code.google.com/p/go.mobile/geom"
-	"code.google.com/p/go.mobile/sprite"
-	"code.google.com/p/go.mobile/sprite/clock"
+	"golang.org/x/mobile/f32"
+	"golang.org/x/mobile/geom"
+	"golang.org/x/mobile/sprite"
+	"golang.org/x/mobile/sprite/clock"
 )
 
 type State struct {
@@ -49,11 +49,11 @@ func (a *Animation) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
 
 func (a *Animation) Transition(t clock.Time, name string) {
 	log.Printf("animation: Transition from %q to %q", a.Current, name)
-	for n := range a.States[a.Current].Transforms {
+	for n, transform := range a.States[a.Current].Transforms {
 		// Squash the final animation state down onto the node.
 		ar := n.Arranger.(*Arrangement)
-		ar.Transform.Transformer.Transform(ar, 1)
-		n.Arranger.(*Arrangement).Transform.Transformer = nil
+		ar.Transform = Transform{}
+		transform.Transformer.Transform(ar, 1)
 	}
 	s := a.States[name]
 	for n, transform := range s.Transforms {
@@ -81,11 +81,11 @@ func (a *Animation) init(root *sprite.Node) error {
 // Arrangement is a sprite Arranger that uses high-level concepts to
 // transform a sprite Node.
 type Arrangement struct {
-	Offset   geom.Point     // distance between parent and pivot
-	Pivot    geom.Point     // point on sized, unrotated node
-	Size     *geom.Point    // optional bounding rectangle for scaling
-	Rotation float32        // radians counter-clockwise
-	Texture  sprite.Texture // optional Node Texture
+	Offset   geom.Point    // distance between parent and pivot
+	Pivot    geom.Point    // point on sized, unrotated node
+	Size     *geom.Point   // optional bounding rectangle for scaling
+	Rotation float32       // radians counter-clockwise
+	SubTex   sprite.SubTex // optional Node Texture
 
 	T0, T1    clock.Time
 	Transform Transform
@@ -104,8 +104,8 @@ func (ar *Arrangement) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
 		tween := fn(ar.T0, ar.T1, t)
 		ar.Transform.Transformer.Transform(&ar2, tween)
 	}
-	e.SetTexture(n, t, ar2.Texture)
-	e.SetTransform(n, t, ar2.Affine())
+	e.SetSubTex(n, ar2.SubTex)
+	e.SetTransform(n, ar2.Affine())
 }
 
 func (ar *Arrangement) Affine() f32.Affine {

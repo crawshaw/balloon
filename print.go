@@ -12,7 +12,7 @@ import (
 
 	"github.com/crawshaw/balloon/animation"
 
-	"code.google.com/p/go.mobile/sprite"
+	"golang.org/x/mobile/sprite"
 )
 
 // A FieldFilter may be provided to Fprint to control the output.
@@ -195,8 +195,8 @@ func (p *printer) print(x reflect.Value) {
 			if ar.Rotation != 0 {
 				p.printf("Rotation:   %g\n", ar.Rotation)
 			}
-			if ar.Texture != 0 {
-				p.printf("Texture:    %d\n", ar.Texture)
+			if ar.SubTex.T != nil {
+				p.printf("SubTex:    %d\n", ar.SubTex)
 			}
 			if ar.Transform.Transformer != nil {
 				p.printf("Transform:")
