@@ -80,7 +80,69 @@ func menuSceneInit() {
 	menuScene = new(sprite.Node)
 	eng.Register(menuScene)
 
-	addText(menuScene, "Gopher Run!", 20, geom.Point{24, 24})
+	gopher1 := &sprite.Node{
+		Arranger: &animation.Arrangement{
+			Offset: geom.Point{X: 24, Y: -36},
+			Size:   &geom.Point{36, 36},
+			Pivot:  geom.Point{18, 18},
+			SubTex: sheet.gopherSwim,
+		},
+	}
+	eng.Register(gopher1)
+	menuScene.AppendChild(gopher1)
+
+	gopher2 := &sprite.Node{
+		Arranger: &animation.Arrangement{
+			Offset: geom.Point{X: 48, Y: -36},
+			Size:   &geom.Point{18, 18},
+			Pivot:  geom.Point{9, 9},
+			SubTex: sheet.gopherRun,
+		},
+	}
+	eng.Register(gopher2)
+	menuScene.AppendChild(gopher2)
+
+	menuScene.Arranger = &animation.Animation{
+		Current: "init",
+		States: map[string]animation.State{
+			"init": animation.State{
+				Duration: 0,
+				Next:     "gopher1_falling",
+			},
+			"gopher1_falling": animation.State{
+				Duration: 120,
+				Next:     "gopher2_falling",
+				Transforms: map[*sprite.Node]animation.Transform{
+					gopher1: animation.Transform{
+						Transformer: animation.Move{Y: geom.Height + 36*2},
+					},
+				},
+			},
+			"gopher2_falling": animation.State{
+				Duration: 90,
+				Next:     "reset",
+				Transforms: map[*sprite.Node]animation.Transform{
+					gopher2: animation.Transform{
+						Transformer: animation.Move{Y: geom.Height + 36*2},
+					},
+				},
+			},
+			"reset": animation.State{
+				Duration: 0,
+				Next:     "gopher1_falling",
+				Transforms: map[*sprite.Node]animation.Transform{
+					gopher1: animation.Transform{
+						Transformer: animation.Move{Y: -geom.Height - 36*2},
+					},
+					gopher2: animation.Transform{
+						Transformer: animation.Move{Y: -geom.Height - 36*2},
+					},
+				},
+			},
+		},
+	}
+
+	addText(menuScene, "Gopher Fall!", 20, geom.Point{24, 24})
 	addText(menuScene, "Tap to start", 14, geom.Point{48, 48})
 }
 
