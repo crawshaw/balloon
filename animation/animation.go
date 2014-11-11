@@ -86,6 +86,7 @@ type Arrangement struct {
 	Size     *geom.Point   // optional bounding rectangle for scaling
 	Rotation float32       // radians counter-clockwise
 	SubTex   sprite.SubTex // optional Node Texture
+	Hidden   bool
 
 	T0, T1    clock.Time
 	Transform Transform
@@ -94,8 +95,12 @@ type Arrangement struct {
 }
 
 func (ar *Arrangement) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
-	ar2 := *ar
+	if ar.Hidden {
+		e.SetTransform(n, f32.Affine{})
+		return
+	}
 
+	ar2 := *ar
 	if ar.Transform.Transformer != nil {
 		fn := ar.Transform.Tween
 		if fn == nil {
