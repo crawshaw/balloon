@@ -53,6 +53,7 @@ func drawWindow() {
 		fb.Image.RGBA.Pix[i] = 0xff // white background
 	}
 	t := now()
+	updateGame(t)
 	eng.Render(scene, t)
 	fb.Upload()
 	fb.Draw(

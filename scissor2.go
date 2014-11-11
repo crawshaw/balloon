@@ -3,7 +3,6 @@ package main
 import (
 	"math"
 
-	"golang.org/x/mobile/event"
 	"golang.org/x/mobile/geom"
 	"golang.org/x/mobile/sprite"
 	"golang.org/x/mobile/sprite/clock"
@@ -24,25 +23,32 @@ type scissorArm2 struct {
 	arrangement animation.Arrangement
 }
 
+func (s *scissorArm2) balloonTravel() (minX, maxX geom.Pt) {
+	minX = geom.Pt(s.numFolds)*10 - 5 + 14
+	maxX = minX + geom.Pt(s.numFolds)*18
+	maxX *= (s.extend / maxExtend)
+	return minX, maxX
+}
+
 func (s *scissorArm2) Arrange(e sprite.Engine, n *sprite.Node, t clock.Time) {
 	s.a.Arrange(e, n, t)
 	s.arrangement.Arrange(e, n, t)
 }
 
 func (s *scissorArm2) moveArm(ar *animation.Arrangement, tween float32) {
-	ar.Offset.X += 16 * geom.Pt(tween) * (s.extend / maxExtend)
+	ar.Offset.X += 18 * geom.Pt(tween) * (s.extend / maxExtend)
 }
 
 func (s *scissorArm2) moveArmBack(ar *animation.Arrangement, tween float32) {
-	ar.Offset.X -= 16 * geom.Pt(tween) * (s.extend / maxExtend)
+	ar.Offset.X -= 18 * geom.Pt(tween) * (s.extend / maxExtend)
 }
 
 func (s *scissorArm2) rotateArm(ar *animation.Arrangement, tween float32) {
-	ar.Rotation += tween * 0.7 * float32(s.extend/maxExtend)
+	ar.Rotation += tween * 0.8 * float32(s.extend/maxExtend)
 }
 
 func (s *scissorArm2) rotateArmBack(ar *animation.Arrangement, tween float32) {
-	ar.Rotation -= tween * 0.7 * float32(s.extend/maxExtend)
+	ar.Rotation -= tween * 0.8 * float32(s.extend/maxExtend)
 }
 
 func newScissorArm2(eng sprite.Engine) *scissorArm2 {
@@ -223,7 +229,7 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 			},
 			"ready": animation.State{},
 			"expanding": animation.State{
-				Duration:   10,
+				Duration:   expandTime,
 				Next:       "open",
 				Transforms: expanding,
 			},
@@ -241,14 +247,4 @@ func newScissorArm2(eng sprite.Engine) *scissorArm2 {
 	s.a.Transition(0, "offscreen")
 
 	return s
-}
-
-func (s *scissorArm2) touch(t clock.Time, e event.Touch) {
-	if scene == menuScene {
-		scene = gameScene
-	}
-	if s.a.Current == "ready" {
-		s.arrangement.Offset.Y = e.Loc.Y
-		s.a.Transition(t, "expanding")
-	}
 }

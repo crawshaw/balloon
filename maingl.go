@@ -42,7 +42,9 @@ func drawWindow() {
 	gl.Enable(gl.BLEND)
 	gl.ClearColor(1, 1, 1, 1)
 	gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-	eng.Render(scene, now())
+	t := now()
+	updateGame(t)
+	eng.Render(scene, t)
 
 	debug.DrawFPS()
 }

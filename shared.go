@@ -46,18 +46,8 @@ var (
 	scene     *sprite.Node
 	gameScene *sprite.Node
 	menuScene *sprite.Node
+	overScene *sprite.Node
 )
-
-var scissor *scissorArm2
-var (
-	scoreText *text.String
-	score     int
-	lives     int
-)
-
-func writeScore() {
-	scoreText.Text = fmt.Sprintf("score: %d  lives: %d", score, lives)
-}
 
 func timerInit() {
 	start = time.Now()
@@ -73,6 +63,7 @@ func timerInit() {
 
 	menuSceneInit()
 	gameSceneInit()
+	overSceneInit()
 	scene = menuScene
 }
 
@@ -132,6 +123,14 @@ func menuSceneInit() {
 	addText(menuScene, "Tap to start", 14, geom.Point{48, 48})
 }
 
+func overSceneInit() {
+	overScene = new(sprite.Node)
+	eng.Register(overScene)
+
+	addText(overScene, "GAME OVER", 20, geom.Point{28, 28})
+	addText(overScene, "Tap to play again", 14, geom.Point{32, 48})
+}
+
 func addText(parent *sprite.Node, str string, size geom.Pt, pos geom.Point) {
 	p := &sprite.Node{
 		Arranger: &animation.Arrangement{
@@ -156,9 +155,9 @@ func gameSceneInit() {
 	gameScene = new(sprite.Node)
 	eng.Register(gameScene)
 
-	scissor = newScissorArm2(eng)
-	scissor.arrangement.Offset.Y = 2 * 72
-	gameScene.AppendChild(scissor.node)
+	game.scissor = newScissorArm2(eng)
+	game.scissor.arrangement.Offset.Y = 2 * 72
+	gameScene.AppendChild(game.scissor.node)
 
 	n1 := new(sprite.Node)
 	eng.Register(n1)
@@ -170,16 +169,14 @@ func gameSceneInit() {
 	t := new(sprite.Node)
 	eng.Register(t)
 	n1.AppendChild(t)
-	scoreText = &text.String{
+	game.scoreText = &text.String{
 		Size:  12,
 		Color: color.Black,
 		Font:  font,
 	}
-	t.Arranger = scoreText
+	t.Arranger = game.scoreText
 
-	score = 0
-	lives = 3
-	writeScore()
+	updateGame(0)
 
 	//Fprint(os.Stdout, gameScene, NotNilFilter)
 }
@@ -230,10 +227,20 @@ func loadSheet() error {
 }
 
 func touch(e event.Touch) {
-	fmt.Printf("touch: %+v\n", e)
-	if e.Type == event.TouchStart {
-		scissor.touch(now(), e)
+	if e.Type != event.TouchStart {
 		return
+	}
+
+	switch scene {
+	case overScene:
+		scene = menuScene
+	case menuScene:
+		startGame()
+		scene = gameScene
+	case gameScene:
+		game.nextTouch = &e
+	default:
+		log.Printf("touch in unknown state %v", e)
 	}
 }
 
