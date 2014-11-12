@@ -12,9 +12,9 @@ import (
 	"golang.org/x/mobile/geom"
 	"golang.org/x/mobile/sprite"
 	"golang.org/x/mobile/sprite/clock"
-	"golang.org/x/mobile/sprite/text"
 
 	"github.com/crawshaw/balloon/animation"
+	"github.com/crawshaw/balloon/text"
 )
 
 const expandTime = 10
