@@ -12,12 +12,12 @@ import (
 	"image/png"
 	"io/ioutil"
 	"log"
-	"path/filepath"
 	"runtime"
 	"time"
 
 	"code.google.com/p/freetype-go/freetype"
 	"code.google.com/p/freetype-go/freetype/truetype"
+	"golang.org/x/mobile/app"
 	"golang.org/x/mobile/event"
 	"golang.org/x/mobile/geom"
 	"golang.org/x/mobile/sprite"
@@ -203,7 +203,11 @@ func loadFont() (*truetype.Font, error) {
 }
 
 func loadSheet() error {
-	mb, err := ioutil.ReadFile(filepath.FromSlash("balloon_sheet.png"))
+	f, err := app.Open("balloon_sheet.png")
+	if err != nil {
+		return err
+	}
+	mb, err := ioutil.ReadAll(f)
 	if err != nil {
 		return err
 	}

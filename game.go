@@ -36,7 +36,7 @@ var game struct {
 	dropSaveY  geom.Pt
 }
 
-const initialPause = 120
+const initialPause = 180
 
 func startGame() {
 	game.score = 0
